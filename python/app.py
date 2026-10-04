@@ -17,7 +17,7 @@ import time
 from contextlib import redirect_stderr, redirect_stdout
 from ctypes import wintypes
 from pathlib import Path
-from tkinter import BOTH, END, LEFT, RIGHT, X, Y, Button, Frame, Label, StringVar, Tk, filedialog, messagebox
+from tkinter import BOTH, END, LEFT, RIGHT, X, Y, Button, Frame, Label, StringVar, Tk, filedialog, font as tkfont, messagebox
 from tkinter.scrolledtext import ScrolledText
 from typing import Any, Callable, Optional
 
@@ -170,13 +170,22 @@ class AstraDroid(Tk):
         except OSError:
             pass
 
+    def _font(self, size: int, bold: bool = False, mono: bool = False) -> tkfont.Font:
+        # A Font object keeps family names containing spaces (Segoe UI,
+        # Cascadia Mono) as a single name. A raw tuple can be split by Tcl on
+        # some Windows/Tk builds, producing: expected integer but got 'UI'.
+        return tkfont.Font(family="Cascadia Mono" if mono else "Segoe UI", size=size, weight="bold" if bold else "normal")
+
     def _label(self, parent: Frame, text: str | StringVar, size: int = 10, color: str = TEXT, bold: bool = False, **kwargs: Any) -> Label:
-        return Label(parent, text=text, bg=parent.cget("bg"), fg=color, font=("Segoe UI", size, "bold" if bold else "normal"), **kwargs)
+        # Tk's ``text`` option does not observe StringVar; use textvariable for
+        # live status cards and inspector fields.
+        content = {"textvariable": text} if isinstance(text, StringVar) else {"text": text}
+        return Label(parent, bg=parent.cget("bg"), fg=color, font=self._font(size, bold), **content, **kwargs)
 
     def _button(self, parent: Frame, text: str, command: Callable[[], None], color: str = PANEL_2, foreground: str = TEXT) -> Button:
         button = Button(parent, text=text, command=command, bg=color, fg=foreground, activebackground=color,
                         activeforeground=foreground, disabledforeground="#73809A", relief="flat", bd=0,
-                        cursor="hand2", padx=12, pady=9, font=("Segoe UI", 9, "bold"), anchor="w")
+                        cursor="hand2", padx=12, pady=9, font=self._font(9, True), anchor="w")
         button.pack(fill=X, padx=20, pady=4)
         self.buttons.append(button)
         return button
@@ -185,7 +194,7 @@ class AstraDroid(Tk):
         card = Frame(parent, bg=PANEL, highlightthickness=1, highlightbackground="#263653", padx=16, pady=12)
         card.pack(side=LEFT, fill=X, expand=True, padx=6)
         title_row = Frame(card, bg=PANEL); title_row.pack(fill=X)
-        Label(title_row, text="●", bg=PANEL, fg=dot_color, font=("Segoe UI", 10, "bold")).pack(side=LEFT)
+        Label(title_row, text="●", bg=PANEL, fg=dot_color, font=self._font(10, True)).pack(side=LEFT)
         self._label(title_row, title, 8, MUTED, True).pack(side=LEFT, padx=(7, 0))
         self._label(card, variable, 10, TEXT, True, justify=LEFT, wraplength=245).pack(anchor="w", pady=(7, 0))
         return card
@@ -195,7 +204,7 @@ class AstraDroid(Tk):
         sidebar.pack(side=LEFT, fill=Y)
         sidebar.pack_propagate(False)
         brand = Frame(sidebar, bg=SIDEBAR); brand.pack(fill=X, padx=20, pady=(24, 30))
-        badge = Label(brand, text="A", bg=ACCENT, fg="white", font=("Segoe UI", 22, "bold"), width=2, pady=2)
+        badge = Label(brand, text="A", bg=ACCENT, fg="white", font=self._font(22, True), width=2, pady=2)
         badge.pack(side=LEFT)
         brand_text = Frame(brand, bg=SIDEBAR); brand_text.pack(side=LEFT, padx=11)
         self._label(brand_text, "AstraDroid", 16, TEXT, True).pack(anchor="w")
@@ -205,9 +214,9 @@ class AstraDroid(Tk):
         self._button(sidebar, "KIỂM TRA HỆ THỐNG", lambda: self.invoke("status", ["status"]))
         self._button(sidebar, "TẠO ANDROID ẢO", self.create_avd, PURPLE)
         dual = Frame(sidebar, bg=SIDEBAR); dual.pack(fill=X, padx=20, pady=4)
-        start = Button(dual, text="MỞ", command=lambda: self.invoke("start", ["start", "--avd", engine.DEFAULT_AVD]), bg=GOOD, fg="#0B201A", relief="flat", bd=0, cursor="hand2", pady=9, font=("Segoe UI", 9, "bold"))
+        start = Button(dual, text="MỞ", command=lambda: self.invoke("start", ["start", "--avd", engine.DEFAULT_AVD]), bg=GOOD, fg="#0B201A", relief="flat", bd=0, cursor="hand2", pady=9, font=self._font(9, True))
         start.pack(side=LEFT, fill=X, expand=True, padx=(0, 4)); self.buttons.append(start)
-        stop = Button(dual, text="DỪNG", command=lambda: self.invoke("stop", ["stop"]), bg=DANGER, fg="white", relief="flat", bd=0, cursor="hand2", pady=9, font=("Segoe UI", 9, "bold"))
+        stop = Button(dual, text="DỪNG", command=lambda: self.invoke("stop", ["stop"]), bg=DANGER, fg="white", relief="flat", bd=0, cursor="hand2", pady=9, font=self._font(9, True))
         stop.pack(side=LEFT, fill=X, expand=True, padx=(4, 0)); self.buttons.append(stop)
         self._button(sidebar, "CÀI & CHẠY APK   Ctrl+Enter", self.install_and_launch, ACCENT)
         self._button(sidebar, "THÔNG TIN THIẾT BỊ", lambda: self.invoke("device", ["device-info"]))
@@ -223,7 +232,7 @@ class AstraDroid(Tk):
         title = Frame(header, bg=BG); title.pack(side=LEFT, fill=X, expand=True)
         self._label(title, "APK Studio", 25, TEXT, True).pack(anchor="w")
         self._label(title, "Kiểm tra, chạy và quản lý app Android hoàn toàn cục bộ.", 10, MUTED).pack(anchor="w", pady=(2, 0))
-        privacy = Label(header, text="●  PRIVATE LOCAL", bg="#1C3555", fg=GOOD, font=("Segoe UI", 9, "bold"), padx=14, pady=8)
+        privacy = Label(header, text="●  PRIVATE LOCAL", bg="#1C3555", fg=GOOD, font=self._font(9, True), padx=14, pady=8)
         privacy.pack(side=RIGHT, pady=8)
 
         status = Frame(main, bg=BG); status.pack(fill=X, padx=22, pady=(8, 13))
@@ -260,7 +269,7 @@ class AstraDroid(Tk):
         log_head = Frame(logs, bg=PANEL); log_head.pack(fill=X, padx=14, pady=(10, 4))
         self._label(log_head, "ACTIVITY LOG", 8, MUTED, True).pack(side=LEFT)
         self._label(log_head, "Ctrl+L logcat  •  Ctrl+Enter install & run", 8, MUTED).pack(side=RIGHT)
-        self.log_box = ScrolledText(logs, height=7, bg=CANVAS, fg="#CCD8ED", insertbackground=TEXT, relief="flat", bd=0, wrap="word", font=("Cascadia Mono", 9), padx=12, pady=10)
+        self.log_box = ScrolledText(logs, height=7, bg=CANVAS, fg="#CCD8ED", insertbackground=TEXT, relief="flat", bd=0, wrap="word", font=self._font(9, mono=True), padx=12, pady=10)
         self.log_box.pack(fill=X, padx=10, pady=(0, 10))
         self.log_box.configure(state="disabled")
         self.log("AstraDroid PyInstaller GUI đang khởi tạo…")
