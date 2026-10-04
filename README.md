@@ -6,7 +6,7 @@
 
 **Kiểm tra · cài đặt · chạy ứng dụng Android APK trong một desktop app Windows hiện đại**
 
-`C++ Win32 GUI` &nbsp;•&nbsp; `Python control plane` &nbsp;•&nbsp; `Android SDK Emulator` &nbsp;•&nbsp; `VT-x / AMD-V`
+`Python GUI + PyInstaller EXE` &nbsp;•&nbsp; `Android SDK Emulator` &nbsp;•&nbsp; `VT-x / AMD-V` &nbsp;•&nbsp; `No MSVC required`
 
 </div>
 
@@ -25,7 +25,7 @@
 
 | | Tính năng |
 |---|---|
-| 🎨 | **Native dark GUI** — giao diện Win32 hiện đại với Fluent/Mica khi Windows hỗ trợ, gradient, status cards, corner bo tròn, phím tắt và activity log. |
+| 🎨 | **Dark Windows GUI** — giao diện Python/Tk hiện đại, dark title bar khi Windows hỗ trợ, status cards, phím tắt và activity log. Đóng gói thành một `.exe` bằng PyInstaller. |
 | ⚡ | **Hardware-aware** — kiểm tra VT-x/AMD-V, SLAT, Hyper-V/Windows virtualization features trước khi khởi động Emulator. |
 | 📦 | **APK Inspector** — đọc package, label, version, min SDK; tính SHA-256 cục bộ; xác minh signing certificate khi Android Build-Tools sẵn sàng. |
 | 📱 | **Android Canvas** — khởi động AVD Pixel, tăng tốc GPU host và thử nhúng Emulator theo PID thay vì nhận diện title không an toàn. |
@@ -55,14 +55,14 @@
 | `Ctrl + O` | Chọn APK |
 | `Ctrl + Enter` | Cài và chạy APK đang chọn |
 | `Ctrl + L` | Lấy logcat gần nhất |
-| Kéo thả `.apk` | Chọn và kiểm tra APK ngay trong cửa sổ |
+| File picker | Chọn APK trực tiếp trong giao diện |
 
 ## Điều kiện bắt buộc
 
 - **Windows 10/11 64-bit**.
 - CPU hỗ trợ **Intel VT-x** hoặc **AMD SVM**, đã bật trong UEFI/BIOS.
 - Python 3 x64 với `py.exe`.
-- Visual Studio 2022 Build Tools — C++ workload.
+- Kết nối Internet ở lần build đầu để `pip` tải PyInstaller. **Không cần Visual Studio hoặc MSVC C++ Build Tools.**
 - Android Studio / Android SDK với: Emulator, Platform-Tools, Command-line Tools, Build-Tools và Google APIs x86_64 system image.
 
 Khuyến nghị: CPU 4 core trở lên, **16 GB RAM**, 20–35 GB ổ đĩa trống, GPU driver mới.
@@ -73,17 +73,17 @@ Khuyến nghị: CPU 4 core trở lên, **16 GB RAM**, 20–35 GB ổ đĩa tr�
 :: 1. Cài prerequisite hướng dẫn qua winget (tùy chọn)
 SETUP_WINDOWS.bat
 
-:: 2. Build native Windows app
+:: 2. Build GUI EXE với PyInstaller (tự cài PyInstaller nếu cần)
 BUILD.bat
 
-:: 3. Mở GUI
+:: 3. Mở GUI đã đóng gói
 RUN.bat
 ```
 
 Nếu build thành công, file ứng dụng được tạo tại:
 
 ```text
-bin\AstraDroid.exe
+dist\AstraDroid.exe
 ```
 
 Trong GUI: **KIỂM TRA HỆ THỐNG → TẠO ANDROID ẢO → MỞ → CHỌN APK → CÀI & CHẠY APK**.
@@ -93,28 +93,32 @@ Trong GUI: **KIỂM TRA HỆ THỐNG → TẠO ANDROID ẢO → MỞ → CHỌN 
 ## Kiến trúc
 
 ```text
-┌───────────────────┐        JSON over stdout        ┌──────────────────────────┐
-│ C++17 Win32 GUI   │ ──────────────────────────────▶ │ Python standard library  │
-│ - Fluent UI       │                                  │ - SDK / AVD lifecycle    │
-│ - Drag & drop     │ ◀────────────────────────────── │ - adb / aapt / apksigner │
-│ - Emulator embed  │                                  │ - VT / Windows probes    │
-└─────────┬─────────┘                                  └────────────┬─────────────┘
-          │ native child window                                      │
-          ▼                                                          ▼
-┌───────────────────┐                                  ┌──────────────────────────┐
-│ Android Canvas    │                                  │ Android SDK Emulator     │
-│ embedded fallback │                                  │ + ADB local device       │
-└───────────────────┘                                  └──────────────────────────┘
+┌──────────────────────────┐          direct calls        ┌──────────────────────────┐
+│ Python/Tk GUI            │ ───────────────────────────▶ │ Python engine (stdlib)   │
+│ - Dark workspace         │                               │ - SDK / AVD lifecycle    │
+│ - APK inspector          │ ◀─────────────────────────── │ - adb / aapt / apksigner │
+│ - Emulator embedding     │       JSON result contract   │ - VT / Windows probes    │
+└────────────┬─────────────┘                               └────────────┬─────────────┘
+             │ native child window                                      │
+             ▼                                                          ▼
+┌──────────────────────────┐                               ┌──────────────────────────┐
+│ Android Canvas           │                               │ Android SDK Emulator     │
+│ embedded fallback        │                               │ + ADB local device       │
+└──────────────────────────┘                               └──────────────────────────┘
+
+`BUILD.bat` dùng PyInstaller để bundle toàn bộ Python runtime/app thành `dist\AstraDroid.exe`; vì vậy không cần compile C++ trên máy người dùng.
 ```
 
 ```text
 AstraDroid/
-├── src/AstraDroid.cpp                      # C++17 native UI + embedding
+├── python/app.py                           # Dark GUI + emulator embedding
 ├── python/engine.py                        # SDK, AVD, APK & ADB orchestration
+├── python/requirements-build.txt           # PyInstaller build dependency
 ├── scripts/Enable-Windows-Acceleration.ps1
-├── SETUP_WINDOWS.bat                       # Prerequisite installer flow
-├── BUILD.bat                               # Produces bin\AstraDroid.exe
+├── SETUP_WINDOWS.bat                       # Python + Android SDK setup flow
+├── BUILD.bat                               # PyInstaller → dist\AstraDroid.exe
 ├── RUN.bat                                 # Launcher
+├── src/AstraDroid.cpp                      # Native C++ host reference (không phải default build)
 └── README.vi.md                            # Hướng dẫn chi tiết tiếng Việt
 ```
 

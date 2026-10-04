@@ -20,7 +20,10 @@ import time
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-APP_ROOT = Path(__file__).resolve().parents[1]
+# In a PyInstaller one-file build, resources are unpacked to ``_MEIPASS``.
+# Use that directory for the bundled PowerShell helper; in source mode retain
+# the project root for normal development.
+APP_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
 APP_DATA = Path(os.environ.get("LOCALAPPDATA", str(APP_ROOT / ".data"))) / "AstraDroid"
 STATE_FILE = APP_DATA / "session.json"
 DEFAULT_AVD = "AstraDroid_Pixel"
