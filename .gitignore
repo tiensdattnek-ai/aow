@@ -1,0 +1,25 @@
+# C++ / MSVC build outputs
+bin/
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.exp
+*.lib
+*.dll
+*.exe
+
+# Python cache and local state
+__pycache__/
+*.py[cod]
+.data/
+
+# Android Emulator / SDK local state
+*.avd/
+*.ini.lock
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

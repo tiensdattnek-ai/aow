@@ -1,0 +1,2 @@
+# No third-party dependencies.
+# AstraDroid's engine intentionally uses the Python 3 standard library only.
