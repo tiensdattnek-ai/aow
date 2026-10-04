@@ -9,8 +9,9 @@ bin/
 *.dll
 *.exe
 
-# Python cache and local state
+# Python cache, diagnostics and local state
 __pycache__/
+logs/
 *.py[cod]
 .data/
 
