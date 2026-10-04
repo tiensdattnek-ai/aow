@@ -132,7 +132,9 @@ class AstraDroid(Tk):
         self.geometry("1420x880")
         self.minsize(1120, 760)
         self.configure(bg=BG)
-        self.option_add("*Font", "Segoe UI 10")
+        # Do not register "Segoe UI 10" as a Tcl option string: some Windows
+        # Tk builds split it at the space and interpret "UI" as a font size.
+        # Every widget below receives a safe tkinter.font.Font object instead.
         self._dark_title_bar()
 
         self.busy = False
